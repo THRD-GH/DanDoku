@@ -12,11 +12,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const image = `${protocol}://${host}/og.png`;
   return {
-    title: "Puzzle Cabinet — Sudoku, remixed",
+    title: "Ninefold — Three ways to play Sudoku",
     description: "Sudoku Variants, Killer Sudoku and Solduku: three distinctive puzzle games for curious minds.",
     icons: { icon: "/favicon.svg" },
-    openGraph: { title: "Puzzle Cabinet", description: "Your next aha! moment is waiting.", type: "website", images: [{ url: image, width: 1731, height: 907, alt: "Puzzle Cabinet — your next aha! moment is waiting." }] },
-    twitter: { card: "summary_large_image", title: "Puzzle Cabinet", description: "Your next aha! moment is waiting.", images: [image] },
+    openGraph: { title: "Ninefold", description: "Sudoku, however you like it.", type: "website", images: [{ url: image, width: 1731, height: 907, alt: "Ninefold — Sudoku, however you like it." }] },
+    twitter: { card: "summary_large_image", title: "Ninefold", description: "Sudoku, however you like it.", images: [image] },
   };
 }
 
