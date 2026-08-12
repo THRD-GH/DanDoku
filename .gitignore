@@ -28,6 +28,7 @@ dev*.log
 preview.log
 prod.log
 prod2.log
+prod3.log
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
