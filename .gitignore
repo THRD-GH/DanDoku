@@ -31,6 +31,8 @@ prod2.log
 prod3.log
 prod4.log
 prod5.log
+prod6.log
+prod7.log
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
@@ -46,3 +48,4 @@ yarn-error.log*
 /outputs/
 /work/
 /*.tar.gz
+prod8.log
