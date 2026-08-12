@@ -28,14 +28,14 @@ export default function Home() {
   const visible=active==="all"?games:games.filter(game=>game.id===active);
   return <main>
     <header className="site-header" id="top">
-      <a className="wordmark" href="#top"><span className="nine-mark">9×9</span><span>Ninefold</span></a>
+      <a className="wordmark" href="#top"><span className="nine-mark">9×9</span><span>DanDoku</span></a>
       <nav aria-label="Main navigation"><a href="#games">All games</a><a href="#about">About</a></nav>
       <a className="header-cta" href="#games">Choose a game</a>
     </header>
 
     <section className="hero">
       <div className="hero-copy">
-        <p className="hero-label">Three original number games</p>
+        <p className="hero-label">Sudoku and other number games</p>
         <h1>Sudoku,<br/><span>however you like it.</span></h1>
         <p className="intro">Classic logic with new rules, cage-sum deduction, or a deck of number cards. Pick a game and start at your level—no account needed.</p>
         <div className="hero-actions"><a className="primary" href="#games">Browse the games <span>↓</span></a><span className="offline-note"><b>●</b> Plays offline</span></div>
@@ -59,6 +59,6 @@ export default function Home() {
     </section>
 
     <section className="about" id="about"><div><p className="kicker">Built for real play</p><h2>Start quickly.<br/>Come back anytime.</h2></div><div className="about-list"><p><b>Works offline</b><span>Install any game and play without a connection.</span></p><p><b>Useful hints</b><span>See the solving technique and reasoning—not just the answer.</span></p><p><b>Progress saved</b><span>Every unfinished puzzle waits exactly where you left it.</span></p></div></section>
-    <footer><a className="wordmark" href="#top"><span className="nine-mark">9×9</span><span>Ninefold</span></a><p>Sudoku Variants · Killer Sudoku · Solduku</p><span>© 2026</span></footer>
+    <footer><a className="wordmark" href="#top"><span className="nine-mark">9×9</span><span>DanDoku</span></a><p>Sudoku Variants · Killer Sudoku · Solduku</p><span>© 2026</span></footer>
   </main>;
 }

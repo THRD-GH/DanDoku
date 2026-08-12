@@ -1,15 +1,15 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
-const output = path.join(root, "pages");
+const output = path.join(root, "static-site");
 const base = "/DanDoku";
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(path.join(root, "dist", "client"), output, { recursive: true });
 
-const response = await fetch("http://localhost:3001/");
+const response = await fetch(process.env.PAGES_SOURCE_URL ?? "http://localhost:3001/");
 if (!response.ok) throw new Error(`Production preview returned ${response.status}`);
 let html = await response.text();
 html = html
@@ -24,7 +24,8 @@ await writeFile(path.join(output, ".nojekyll"), "");
 // Vinext chunks contain root-relative asset references. Point those at the
 // repository subpath used by GitHub Pages.
 const chunkDir = path.join(output, "_next", "static", "chunks");
-for (const name of ["framework-BgSIrAUN.js", "index-B-HxakUH.js", "layout-segment-context-CgtwPC6M.js", "page-BhYRtJu8.js", "rolldown-runtime-C60lm6uB.js"]) {
+for (const name of await readdir(chunkDir)) {
+  if (!name.endsWith(".js")) continue;
   const file = path.join(chunkDir, name);
   let source = await readFile(file, "utf8");
   source = source.replaceAll('"/_next/', `"${base}/_next/`).replaceAll("'/_next/", `'${base}/_next/`);
