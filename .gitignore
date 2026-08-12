@@ -30,6 +30,7 @@ prod.log
 prod2.log
 prod3.log
 prod4.log
+prod5.log
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
