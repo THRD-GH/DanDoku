@@ -16,6 +16,13 @@ function GamePreview({game,compact=false}:{game:(typeof games)[number];compact?:
 }
 function MiniBoard({game}:{game:(typeof games)[number]}){return <GamePreview game={game} compact/>}
 
+function AdPlaceholder({format,className=""}:{format:string;className?:string}){
+  return <aside className={`ad-placeholder ${className}`} aria-label={`Advertisement placeholder, ${format}`}>
+    <div className="ad-copy"><span>Advertisement</span><b>Your message here</b><small>{format} placeholder</small></div>
+    <button aria-label="Example advertisement button">Learn more</button>
+  </aside>;
+}
+
 export default function Home() {
   const [active,setActive]=useState("all");
   const visible=active==="all"?games:games.filter(game=>game.id===active);
@@ -42,10 +49,13 @@ export default function Home() {
 
     <section className="quick-strip" aria-label="Collection summary"><span><b>3</b> distinct games</span><span><b>6</b> difficulty levels</span><span><b>∞</b> puzzles to play</span></section>
 
+    <div className="ad-wrap ad-leaderboard"><AdPlaceholder format="970 × 90"/></div>
+
     <section className="collection" id="games">
       <div className="section-heading"><div><p className="kicker">The collection</p><h2>Pick your puzzle</h2></div><p>Every game works offline, remembers your progress, and offers six carefully measured difficulty levels.</p></div>
       <div className="filters" aria-label="Filter games"><button className={active==="all"?"active":""} onClick={()=>setActive("all")}>All games</button>{games.map(game=><button key={game.id} className={active===game.id?"active":""} onClick={()=>setActive(game.id)}>{game.title}</button>)}</div>
       <div className="game-grid">{visible.map((game,index)=><article className={`game-card ${game.accent}`} key={game.id}><div className="card-number">0{index+1}</div><MiniBoard game={game}/><div className="card-copy"><p className="eyebrow">{game.eyebrow}</p><h3>{game.title}</h3><p>{game.description}</p><div className="card-foot"><span>{game.meta}</span><button aria-label={`Play ${game.title}`}>Play <b>↗</b></button></div></div></article>)}</div>
+      <div className="ad-wrap ad-native"><AdPlaceholder format="Responsive native banner"/></div>
     </section>
 
     <section className="about" id="about"><div><p className="kicker">Built for real play</p><h2>Start quickly.<br/>Come back anytime.</h2></div><div className="about-list"><p><b>Works offline</b><span>Install any game and play without a connection.</span></p><p><b>Useful hints</b><span>See the solving technique and reasoning—not just the answer.</span></p><p><b>Progress saved</b><span>Every unfinished puzzle waits exactly where you left it.</span></p></div></section>
