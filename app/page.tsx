@@ -42,7 +42,7 @@ export default function Home() {
     <section className="hero">
       <div className="hero-copy">
         <p className="hero-label">Sudoku and other number games</p>
-        <h1>Sudoku,<br/><span>however you like it.</span></h1>
+        <h1>Sudoku,<br/><span>however you like&nbsp;it.</span></h1>
         <p className="intro">Classic logic with new rules, cage-sum deduction, or a deck of number cards. Pick a game and start at your level—no account needed.</p>
         <div className="hero-actions"><a className="primary" href="#games">Browse the games <span>↓</span></a><span className="offline-note"><b>●</b> Plays offline</span></div>
       </div>
