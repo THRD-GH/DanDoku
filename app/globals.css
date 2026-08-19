@@ -75,3 +75,26 @@
 /* Joker face uses the same classic card language as the numbered cards. */
 .real-hand i.joker{padding:0;overflow:hidden;background:linear-gradient(145deg,#fffdf4 0 68%,#efc44f 68%);color:var(--ink)}.joker-index{position:absolute;left:5px;top:6px;font:800 5px var(--font-mono);letter-spacing:.08em;writing-mode:vertical-rl}.joker-index-bottom{left:auto;top:auto;right:5px;bottom:6px;transform:rotate(180deg)}.real-hand i.joker .joker-face{display:grid;place-items:center;width:31px;height:31px;border:1px solid rgba(23,39,61,.28);border-radius:50%;background:#efc44f;color:#17273d;font:700 24px Georgia,serif;line-height:1}.real-hand i.joker .joker-ribbon{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);margin:0;padding:2px 5px;background:var(--ink);color:#fff;font:800 5px var(--font-mono);letter-spacing:.12em}.compact .real-hand i.joker .joker-face{width:40px;height:40px;font-size:31px}.compact .real-hand i.joker .joker-ribbon{bottom:13px;font-size:6px}.compact .joker-index{font-size:6px}
 .real-hand i.joker img{display:block;width:92%;height:82%;object-fit:contain;transform:translateY(-2px) scale(1.2)}.real-hand i.joker .joker-ribbon{z-index:2}.compact .real-hand i.joker img{width:94%;height:84%;transform:translateY(-3px) scale(1.2)}
+
+/* Puzzle navigation and primary play actions. */
+.stack-card{color:inherit;text-decoration:none;cursor:pointer}
+.stack-card:focus-visible{z-index:6;outline:4px solid var(--coral);outline-offset:5px;transform:rotate(0) translateY(-8px)}
+.game-card{scroll-margin-top:92px}
+.card-foot .play-now{min-height:44px;padding:0 16px;border:2px solid var(--ink);border-radius:4px;background:var(--ink);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;text-transform:uppercase;letter-spacing:.06em;font:800 11px var(--font-mono);box-shadow:4px 4px 0 var(--coral);transition:transform .18s,box-shadow .18s,background .18s}
+.card-foot .play-now b{font-size:20px;line-height:1;margin:0}
+.card-foot .play-now:hover,.card-foot .play-now:focus-visible{background:var(--coral);transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink);outline:0}
+@media(max-width:680px){.card-foot{align-items:flex-start;flex-direction:column}.card-foot .play-now{width:100%;min-height:50px;font-size:12px}}
+
+/* Plain-language privacy promise. */
+footer{display:block;min-height:0;padding-top:36px;padding-bottom:36px}
+.footer-main{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.privacy-note{max-width:850px;margin:28px auto 0;padding-top:22px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;line-height:1.6}
+.privacy-note b{color:var(--ink)}
+@media(max-width:680px){.footer-main{align-items:flex-start;flex-direction:column}.privacy-note{margin-top:24px;text-align:left}}
+
+/* Clear, always-visible level guide replaces the former hover-only bars. */
+.level-guide-link{margin:20px 0 18px;padding:13px 14px;border:1px solid rgba(23,39,61,.28);background:rgba(255,255,255,.35);color:var(--ink);display:flex;align-items:center;justify-content:space-between;gap:16px;text-decoration:none;transition:background .18s,transform .18s}
+.level-guide-link>span{display:grid;gap:3px}.level-guide-link b{font:800 11px var(--font-mono);text-transform:uppercase;letter-spacing:.06em}.level-guide-link small{color:var(--muted);font-size:11px}.level-guide-link em{font:800 20px var(--font-mono);font-style:normal}.level-guide-link:hover,.level-guide-link:focus-visible{background:#fffdfa;transform:translateX(3px);outline:2px solid var(--ink);outline-offset:2px}
+.levels{scroll-margin-top:70px;padding:100px clamp(24px,7vw,110px);background:var(--night);color:#fff}.levels-heading{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(300px,1fr);align-items:end;gap:8vw}.levels-heading h2{margin:0;font-size:clamp(40px,5vw,68px);line-height:1;letter-spacing:-.045em}.levels-heading>p{max-width:590px;margin:0;color:#b9c4cf;line-height:1.7}.level-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:58px 0 38px}.level-rank{min-width:0;padding:18px 14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.055);display:grid;gap:5px}.level-colour{width:38px;height:38px;margin-bottom:12px;border:2px solid rgba(255,255,255,.65);border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.16)}.level-rank span{color:#b9c4cf;font-size:11px}.level-rank b{font:800 13px var(--font-mono)}.level-rank small{color:#8393a3;font-size:10px}.levels-play-link{width:max-content;display:flex;align-items:center;gap:14px;padding-bottom:6px;border-bottom:2px solid var(--coral);color:#fff;text-decoration:none;font:800 12px var(--font-mono);text-transform:uppercase;letter-spacing:.08em}.levels-play-link span{font-size:18px}.levels-play-link:hover,.levels-play-link:focus-visible{color:var(--coral);outline:0}
+@media(max-width:1020px){.level-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.levels{padding-top:76px;padding-bottom:76px}.levels-heading{grid-template-columns:1fr;align-items:start;gap:24px}.level-grid{grid-template-columns:repeat(2,1fr);margin-top:38px}.level-rank{padding:15px 12px}.level-colour{width:32px;height:32px}.level-guide-link{padding:14px}}
