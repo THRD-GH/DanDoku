@@ -5,13 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
   # The games live in their own repositories, so a push here is not the only
-  # thing that should refresh the site. Each game repo can poke this workflow
-  # with a repository_dispatch of type "game-updated" (see README), and the
-  # nightly run is the no-credentials fallback if that is not wired up.
-  repository_dispatch:
-    types: [game-updated]
+  # thing that should refresh the site. Rather than have each game repo hold a
+  # token to poke this one, this workflow polls: the deployed site records the
+  # commits it was built from, and the check job below compares them. Public
+  # repos are readable without credentials, so no secrets exist anywhere.
   schedule:
-    - cron: "17 4 * * *"
+    - cron: "*/15 * * * *"
 
 permissions:
   contents: read
@@ -22,8 +21,46 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  SUDOKU_REPO: THRD-GH/SodukuCombined
+  KILLER_REPO: THRD-GH/KillerSoduku
+  SOLDUKU_REPO: THRD-GH/Solduku
+
 jobs:
+  # Cheap no-credential poll: roughly ten seconds, and on a quiet schedule tick
+  # it skips the deploy entirely rather than rebuilding three games for nothing.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+      fingerprint: ${{ steps.compare.outputs.want }}
+    steps:
+      - id: compare
+        run: |
+          set -euo pipefail
+          head_of() { git ls-remote "https://github.com/$1.git" HEAD | cut -f1; }
+          want="${{ github.sha }}-$(head_of "$SUDOKU_REPO")-$(head_of "$KILLER_REPO")-$(head_of "$SOLDUKU_REPO")"
+
+          # The live site publishes its own provenance. If it is unreachable or
+          # predates this file, treat it as changed and rebuild.
+          have=$(curl -fsS --max-time 20 https://dandoku.com/build-info.json 2>/dev/null \
+                 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).fingerprint||""))}catch{process.stdout.write("")}})' 2>/dev/null || true)
+
+          echo "want: $want"
+          echo "have: ${have:-<none>}"
+          echo "want=$want" >> "$GITHUB_OUTPUT"
+          if [ "$want" = "$have" ]; then
+            echo "Nothing changed; skipping deploy."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
+    needs: check
+    # A schedule tick only deploys when something actually moved. Pushes and
+    # manual runs always deploy.
+    if: github.event_name != 'schedule' || needs.check.outputs.changed == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -34,17 +71,11 @@ jobs:
       # Check the games out before setup-node so their lockfiles are visible to
       # the dependency cache.
       - uses: actions/checkout@v4
-        with:
-          repository: THRD-GH/SodukuCombined
-          path: games/sudoku
+        with: { repository: THRD-GH/SodukuCombined, path: games/sudoku }
       - uses: actions/checkout@v4
-        with:
-          repository: THRD-GH/KillerSoduku
-          path: games/killer
+        with: { repository: THRD-GH/KillerSoduku, path: games/killer }
       - uses: actions/checkout@v4
-        with:
-          repository: THRD-GH/Solduku
-          path: games/solduku
+        with: { repository: THRD-GH/Solduku, path: games/solduku }
 
       - uses: actions/setup-node@v4
         with:
@@ -92,6 +123,32 @@ jobs:
             fi
           done
           exit $fail
+
+      # Publish what this build came from, so the poll above can tell whether a
+      # later run has anything to do. This is what replaces a dispatch token.
+      - name: Record build provenance
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("node:fs");
+            const { execSync } = require("node:child_process");
+            const head = (dir) => execSync("git rev-parse HEAD", { cwd: dir }).toString().trim();
+            const games = { sudoku: head("games/sudoku"), killer: head("games/killer"), solduku: head("games/solduku") };
+            const info = {
+              site: process.env.GITHUB_SHA,
+              games,
+              fingerprint: [process.env.GITHUB_SHA, games.sudoku, games.killer, games.solduku].join("-"),
+              builtAt: new Date().toISOString(),
+            };
+            fs.writeFileSync("static-site/build-info.json", JSON.stringify(info, null, 2) + "\n");
+            console.log(info.fingerprint);
+          '
+          # The poll compares against this exact value; a mismatch here would
+          # make every scheduled run rebuild forever.
+          built=$(node -pe 'JSON.parse(require("fs").readFileSync("static-site/build-info.json","utf8")).fingerprint')
+          if [ "$built" != "${{ needs.check.outputs.fingerprint }}" ]; then
+            echo "::warning::fingerprint differs from the poll's expectation (a game moved mid-build); next tick will rebuild"
+          fi
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

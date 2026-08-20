@@ -67,24 +67,26 @@ root-absolute assets, since those would 404 under a sub-path.
 ### Keeping the games current
 
 A push to a game repo deploys that repo's own Pages site but does not rebuild
-this one. Two ways to refresh it:
+this one. Rather than give every game repo a token to poke this one, the site
+polls itself — **no secrets exist anywhere**:
 
-- **Nightly** — a scheduled run rebuilds everything once a day. This is the
-  default and needs no setup.
-- **On push (instant)** — add a step to each game's deploy workflow that pokes
-  this repo. It needs a fine-grained PAT with `contents: write` on
-  `THRD-GH/DanDoku`, stored as a secret in the game repo:
+1. Each deploy writes `build-info.json` into the site, recording the commit of
+   this repo and of each game it was built from, plus a combined `fingerprint`.
+2. A scheduled `check` job every 15 minutes reads the current head of each game
+   with `git ls-remote` — public repos need no credentials — and compares the
+   result against the `fingerprint` published at
+   [`/build-info.json`](https://dandoku.com/build-info.json).
+3. If they match, nothing has moved and the deploy is skipped. If they differ —
+   or the file is missing or unreadable — it rebuilds.
 
-  ```yaml
-  - name: Rebuild dandoku.com
-    run: |
-      curl -fsS -X POST         -H "Authorization: Bearer ${{ secrets.DANDOKU_DISPATCH_TOKEN }}"         -H "Accept: application/vnd.github+json"         https://api.github.com/repos/THRD-GH/DanDoku/dispatches         -d '{"event_type":"game-updated"}'
-  ```
+The check costs a few seconds and does no work on a quiet tick, so the common
+case is a cheap no-op rather than three needless game builds. Pushes here and
+manual runs from the Actions tab always deploy without consulting the poll.
 
-  You can also just run the workflow by hand from the Actions tab.
-
-Note that a broken game build fails this deploy, which keeps a half-assembled
-site from shipping but does mean a bad game blocks homepage updates too.
+Two things to know about scheduled workflows: GitHub queues them on a
+best-effort basis, so a tick can land late, and it disables schedules
+automatically in a repository with no activity for 60 days. If the games stop
+picking up changes, check that the schedule is still enabled.
 
 ## Where the site lives
 
