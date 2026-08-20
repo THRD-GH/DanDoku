@@ -9,8 +9,12 @@ on:
   # token to poke this one, this workflow polls: the deployed site records the
   # commits it was built from, and the check job below compares them. Public
   # repos are readable without credentials, so no secret exists anywhere.
+  #
+  # Once a day is the cadence; use "Run workflow" in the Actions tab to pick up
+  # a game change immediately. Deliberately off the hour, since GitHub throttles
+  # scheduled runs hardest there.
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "17 4 * * *"
 
 permissions:
   contents: read
@@ -25,8 +29,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Cheap no-credential poll, schedule only: roughly ten seconds, and on a quiet
-  # tick it skips the deploy rather than rebuilding three games for nothing.
+  # Cheap no-credential poll, schedule only: roughly ten seconds, so a day with
+  # no game changes costs that instead of a full rebuild of three games.
   check:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest

@@ -94,25 +94,24 @@ root-absolute assets, since those would 404 under a sub-path.
 
 A push to a game repo deploys that repo's own Pages site but does not rebuild
 this one. Rather than give every game repo a token to poke this one, the site
-polls itself — **no secrets exist anywhere**:
+polls itself once a day — **no secrets exist anywhere**:
 
 1. Each deploy writes `build-info.json` into the site, recording the commit of
    this repo and of each game it was built from, plus a combined `fingerprint`.
-2. A scheduled `check` job every 15 minutes reads the current head of each game
+2. A scheduled `check` job reads the current head of each game in `games.json`
    with `git ls-remote` — public repos need no credentials — and compares the
    result against the `fingerprint` published at
    [`/build-info.json`](https://dandoku.com/build-info.json).
 3. If they match, nothing has moved and the deploy is skipped. If they differ —
    or the file is missing or unreadable — it rebuilds.
 
-The check costs a few seconds and does no work on a quiet tick, so the common
-case is a cheap no-op rather than three needless game builds. Pushes here and
-manual runs from the Actions tab always deploy without consulting the poll.
+**To pick up a game change immediately**, run the workflow by hand from the
+Actions tab. That skips the poll and always deploys.
 
 Two things to know about scheduled workflows: GitHub queues them on a
-best-effort basis, so a tick can land late, and it disables schedules
-automatically in a repository with no activity for 60 days. If the games stop
-picking up changes, check that the schedule is still enabled.
+best-effort basis, so the daily run can land well after 04:17 UTC, and it
+disables schedules automatically in a repository with no activity for 60 days.
+If the games stop picking up changes, check that the schedule is still enabled.
 
 ## Where the site lives
 
