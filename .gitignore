@@ -52,3 +52,11 @@ prod8.log
 prod9.log
 prod10.log
 prod11.log
+
+# Generated GitHub Pages snapshot. CI rebuilds it from source on every deploy
+# and assembles the games into it, so the committed copy was only ever a stale
+# duplicate — and would now also carry three built game bundles.
+/static-site/
+
+# Game repos checked out by CI to be assembled into the site.
+/games/

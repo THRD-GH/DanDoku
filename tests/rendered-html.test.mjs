@@ -36,15 +36,16 @@ test("serves the DanDoku homepage", async () => {
 
 test("links out to every game in the collection", async () => {
   const html = await (await render()).text();
-  const expected = [
-    "https://thrd-gh.github.io/SodukuCombined/?v=S",
-    "https://thrd-gh.github.io/SodukuCombined/?v=XJ",
-    "https://thrd-gh.github.io/KillerSoduku/",
-    "https://thrd-gh.github.io/Solduku/",
-  ];
+  // The games are assembled into this same site at these paths by
+  // .github/workflows/pages.yml, so the links are same-origin and relative.
+  const expected = ["/sudoku/?v=S", "/sudoku/?v=XJ", "/killer/", "/solduku/"];
   for (const url of expected) {
-    assert.ok(html.includes(url), `expected the page to link to ${url}`);
+    assert.ok(html.includes(`href="${url}"`), `expected the page to link to ${url}`);
   }
+  assert.ok(
+    !html.includes("thrd-gh.github.io/SodukuCombined"),
+    "game links should not point back at the standalone Pages sites",
+  );
   // Classic and Variants share an engine and are told apart only by ?v=,
   // so a card link losing its query string is a silent regression.
   assert.ok(html.includes("?v=S"), "Classic must open the S variant");

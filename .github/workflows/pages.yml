@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # The games live in their own repositories, so a push here is not the only
+  # thing that should refresh the site. Each game repo can poke this workflow
+  # with a repository_dispatch of type "game-updated" (see README), and the
+  # nightly run is the no-credentials fallback if that is not wired up.
+  repository_dispatch:
+    types: [game-updated]
+  schedule:
+    - cron: "17 4 * * *"
 
 permissions:
   contents: read
@@ -22,20 +30,69 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Check the games out before setup-node so their lockfiles are visible to
+      # the dependency cache.
+      - uses: actions/checkout@v4
+        with:
+          repository: THRD-GH/SodukuCombined
+          path: games/sudoku
+      - uses: actions/checkout@v4
+        with:
+          repository: THRD-GH/KillerSoduku
+          path: games/killer
+      - uses: actions/checkout@v4
+        with:
+          repository: THRD-GH/Solduku
+          path: games/solduku
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            games/*/package-lock.json
+
       - run: npm ci
       - run: npm run lint
       # The test suite renders the built worker, so it has to run after the build.
       - run: npm run build
       - run: npm test
       # Build the snapshot here rather than deploying whatever happens to be
-      # committed in static-site/. Previously this job uploaded the checked-in
-      # folder untouched, so a source change could ship a green build and leave
-      # the live site on the old snapshot.
+      # committed. This step wipes and recreates static-site/, so the games must
+      # be assembled after it, not before.
       - run: npm run build:pages
+
+      - name: Assemble the games into the site
+        run: |
+          set -euo pipefail
+          for slug in sudoku killer solduku; do
+            echo "::group::$slug"
+            ( cd "games/$slug" && npm ci && npm run build )
+            cp -r "games/$slug/dist" "static-site/$slug"
+            test -f "static-site/$slug/index.html" || { echo "$slug produced no index.html"; exit 1; }
+            echo "assembled /$slug/"
+            echo "::endgroup::"
+          done
+
+      # Every game builds with Vite `base: './'`, so its assets are relative and
+      # work from any sub-path. If that ever changes, the game would request
+      # assets from the domain root and silently 404 — the same failure that
+      # took the homepage down — so fail the build instead of shipping it.
+      - name: Verify the games are sub-path safe
+        run: |
+          set -euo pipefail
+          fail=0
+          for slug in sudoku killer solduku; do
+            if grep -qE '(src|href)="/[^"]' "static-site/$slug/index.html"; then
+              echo "::error::/$slug/ references root-absolute assets and will 404 under a sub-path"
+              grep -oE '(src|href)="/[^"]*"' "static-site/$slug/index.html" | head -5
+              fail=1
+            fi
+          done
+          exit $fail
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

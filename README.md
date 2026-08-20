@@ -3,18 +3,22 @@
 The homepage for [DanDoku](https://thrd-gh.github.io/DanDoku/) — a small collection of
 Sudoku variants and other number games. One page, no account, no tracking.
 
-It links out to four games, each hosted in its own repository:
+The four games are served from this same domain, assembled into the site at
+deploy time. Each lives in its own repository:
 
-| Game | Link |
-| --- | --- |
-| Classic Sudoku | [SodukuCombined `?v=S`](https://thrd-gh.github.io/SodukuCombined/?v=S) |
-| Sudoku Variants | [SodukuCombined `?v=XJ`](https://thrd-gh.github.io/SodukuCombined/?v=XJ) |
-| Killer Sudoku | [KillerSoduku](https://thrd-gh.github.io/KillerSoduku/) |
-| Solduku | [Solduku](https://thrd-gh.github.io/Solduku/) |
+| Game | Path | Source |
+| --- | --- | --- |
+| Classic Sudoku | `/sudoku/?v=S` | [SodukuCombined](https://github.com/THRD-GH/SodukuCombined) |
+| Sudoku Variants | `/sudoku/?v=XJ` | [SodukuCombined](https://github.com/THRD-GH/SodukuCombined) |
+| Killer Sudoku | `/killer/` | [KillerSoduku](https://github.com/THRD-GH/KillerSoduku) |
+| Solduku | `/solduku/` | [Solduku](https://github.com/THRD-GH/Solduku) |
 
 Classic and Variants are the same engine; the `?v=` query string selects the rule
 mix, so a card link that loses its query string silently sends players to the
 wrong game. A test covers this.
+
+Each game repo also still publishes its own standalone Pages site, so the old
+`thrd-gh.github.io/<repo>/` links keep working.
 
 ## Prerequisites
 
@@ -35,12 +39,52 @@ The site is a static snapshot deployed to GitHub Pages.
 2. `npm run build:pages` starts the production server, snapshots the rendered
    HTML into `static-site/`, rewrites root-relative asset paths onto the
    base path derived from `SITE_URL`, and verifies the result before writing it.
-3. `.github/workflows/pages.yml` runs all of the above on every push to `main`
+3. The workflow then checks out each game repo, builds it, and copies its
+   `dist` into `static-site/<slug>/`.
+4. `.github/workflows/pages.yml` runs all of the above on every push to `main`
    and deploys what it just built.
 
 CI builds the snapshot rather than deploying the committed copy of
 `static-site/`, so editing `app/` is enough — the snapshot in the repo is only a
 build artifact.
+
+## How the games get here
+
+GitHub Pages allows one custom domain per repository and has no cross-repo path
+routing, so `dandoku.com/killer/` cannot be served *from* the KillerSoduku repo.
+The games are therefore built and copied into this site during deploy.
+
+This works because every game builds with Vite `base: './'` — its assets are
+relative, so its `dist/` runs from any sub-path unchanged. The service workers
+register as `` `${base}sw.js` `` with `{ scope: base }`, so each scopes to its own
+directory rather than taking over the domain, and each game namespaces its
+storage (`sv:v1:`, `sd:v1:`, `ks:v1:`) and prunes only its own prefix — so
+sharing one origin is safe.
+
+The workflow fails the build if a game's `index.html` starts requesting
+root-absolute assets, since those would 404 under a sub-path.
+
+### Keeping the games current
+
+A push to a game repo deploys that repo's own Pages site but does not rebuild
+this one. Two ways to refresh it:
+
+- **Nightly** — a scheduled run rebuilds everything once a day. This is the
+  default and needs no setup.
+- **On push (instant)** — add a step to each game's deploy workflow that pokes
+  this repo. It needs a fine-grained PAT with `contents: write` on
+  `THRD-GH/DanDoku`, stored as a secret in the game repo:
+
+  ```yaml
+  - name: Rebuild dandoku.com
+    run: |
+      curl -fsS -X POST         -H "Authorization: Bearer ${{ secrets.DANDOKU_DISPATCH_TOKEN }}"         -H "Accept: application/vnd.github+json"         https://api.github.com/repos/THRD-GH/DanDoku/dispatches         -d '{"event_type":"game-updated"}'
+  ```
+
+  You can also just run the workflow by hand from the Actions tab.
+
+Note that a broken game build fails this deploy, which keeps a half-assembled
+site from shipping but does mean a bad game blocks homepage updates too.
 
 ## Where the site lives
 
@@ -59,25 +103,21 @@ live site returned 404 and the page rendered unstyled. `build:pages` now fails
 the build if a base-path prefix reappears while `SITE_URL` points at a root
 domain.
 
-### Outstanding: HTTPS
+### DNS and HTTPS
 
-`https://dandoku.com` does **not** work yet. It serves GitHub's `*.github.io`
-wildcard certificate, which does not cover the custom domain — GitHub never
-provisioned one, because the DNS is inconsistent:
+The domain is served directly by GitHub Pages, with a GitHub-issued certificate
+covering `dandoku.com` and `www.dandoku.com`, and **Enforce HTTPS** is on.
 
-- `A` records point at GitHub Pages (`185.199.108–111.153`) — correct
-- `AAAA` records point at Cloudflare (`2606:4700:…`) — **wrong**
-- `www` is a `CNAME` to `thrd-gh.github.io` — correct
+The records must resolve straight to GitHub, on both address families:
 
-To finish the setup, in the DNS provider for dandoku.com either delete the two
-`AAAA` records or repoint them at GitHub Pages
-(`2606:50c0:8000::153` through `2606:50c0:8003::153`), and make sure the records
-resolve directly to GitHub rather than through a proxy. Then re-save the custom
-domain in the repository's Pages settings to trigger certificate issuance, and
-turn on **Enforce HTTPS**.
+- `A` → `185.199.108.153` – `185.199.111.153`
+- `AAAA` → `2606:50c0:8000::153` – `2606:50c0:8003::153`
+- `www` → `CNAME thrd-gh.github.io`
 
-Until that is done the site is reachable over HTTP only, and `og:image` — which
-correctly points at `https://dandoku.com/og.png` — will not load for scrapers.
+Keep them unproxied. Pointing either family at a proxy breaks GitHub's domain
+validation, and the certificate silently never gets issued — the symptom is
+`https://dandoku.com` serving GitHub's `*.github.io` wildcard instead of its own
+certificate.
 
 ## Commands
 
@@ -92,5 +132,6 @@ correctly points at `https://dandoku.com/og.png` — will not load for scrapers.
 - `app/` — the entire site: `page.tsx` (markup and game data), `globals.css`,
   `layout.tsx` (metadata and `SITE_URL`)
 - `scripts/build-pages.mjs` — snapshot builder
-- `static-site/` — generated snapshot, rebuilt by CI
+- `static-site/` — generated snapshot with the games assembled in; not
+  committed, rebuilt by CI on every deploy
 - `worker/` — Cloudflare Worker entry used by the vinext build
