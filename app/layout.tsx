@@ -37,13 +37,13 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: "DanDoku",
-    images: [{ url: "/og.png", width: 1200, height: 628, alt: "DanDoku — Sudoku, however you like it." }],
+    images: [{ url: "/og.jpg", width: 1200, height: 628, alt: "DanDoku — Sudoku, however you like it." }],
   },
   twitter: {
     card: "summary_large_image",
     title: "DanDoku",
     description: "Sudoku, however you like it.",
-    images: ["/og.png"],
+    images: ["/og.jpg"],
   },
 };
 

@@ -17,24 +17,52 @@ const SUDOKU = "THRD-GH/SodukuCombined";
 const KILLER = "THRD-GH/KillerSoduku";
 const SOLDUKU = "THRD-GH/Solduku";
 
+// Real puzzles, lifted from the games' own generators rather than drawn by
+// hand: S4-128, XJ5-27 and K6-104 are the ids shown on the cards, and each was
+// re-verified here (unique solution; cages tiling the grid with no single-cell
+// cage; Solduku's dealt digits conflict-free).
+const classicGivens=[0,0,0,0,0,0,0,0,3,0,0,9,0,6,8,0,2,0,8,0,0,0,0,5,0,0,0,0,4,0,0,0,1,0,0,7,0,5,0,0,4,0,0,9,0,0,0,2,3,0,0,0,6,0,0,0,0,5,0,0,0,0,4,0,0,4,9,0,0,2,0,8,0,0,3,0,0,0,1,0,0];
+const variantGivens=[8,7,0,0,0,1,0,0,0,0,1,0,0,0,6,0,0,0,0,6,0,3,0,0,0,0,0,4,0,0,0,0,0,0,9,0,0,0,6,0,0,0,1,0,0,0,9,0,0,0,0,0,0,4,0,0,0,0,0,7,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,8,2];
+// Irregular nine-cell jigsaw regions replacing the 3x3 boxes, and a colouring
+// where no two touching regions share a shade.
+const jigsawRegions=[0,0,0,1,1,1,2,2,2,0,0,0,1,1,1,2,2,2,3,0,0,0,1,1,1,2,2,3,3,4,4,4,5,5,2,5,3,3,3,4,4,4,5,5,5,3,6,3,3,4,4,4,5,5,6,6,7,7,7,8,8,8,5,6,6,6,7,7,7,8,8,8,6,6,6,7,7,7,8,8,8];
+const jigsawColour=[0,1,0,1,2,3,0,3,0];
+const killerCage=[11,21,21,2,2,18,18,18,4,11,11,21,2,2,2,25,18,4,20,20,5,1,1,2,25,19,4,6,6,5,5,1,23,25,19,4,6,9,12,12,17,23,15,15,4,6,9,12,12,17,23,7,7,4,8,8,12,0,0,10,10,7,16,22,8,14,14,14,10,24,24,16,22,22,13,13,3,3,3,3,3];
+const killerSum=[17,14,0,30,0,19,0,0,26,0,0,0,0,0,0,17,0,0,7,0,14,14,0,0,0,12,0,21,0,0,0,0,17,0,0,0,0,15,20,0,11,0,9,0,0,0,0,0,0,0,0,14,0,0,16,0,0,9,0,9,0,0,17,12,0,17,0,0,0,13,0,0,0,0,14,0,21,0,0,0,0];
+const soldukuGivens=[0,6,5,0,0,0,0,8,3,0,0,0,0,0,0,0,0,4,0,0,0,0,0,8,0,9,0,2,0,8,0,0,0,0,0,0,5,0,0,2,0,0,7,0,0,0,1,0,0,4,0,0,0,0,1,0,7,0,0,9,8,0,0,4,8,0,5,0,3,1,0,0,0,0,0,0,0,6,0,0,0];
+
 const games = [
-  { id:"classic", url:playPath(SUDOKU,"?v=S"), eyebrow:"The timeless original", title:"Classic Sudoku", description:"Rows, columns and 3×3 boxes—the familiar game, presented cleanly with measured difficulty and useful technique-based hints.", meta:"Classic play · White belt through to 1st Dan", accent:"classic", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
-  { id:"variants", url:playPath(SUDOKU,"?v=XJ"), eyebrow:"The original, remixed", title:"Sudoku Variants", description:"Mix X, Jigsaw, Hyper, Percent and Colour rules in any combination. Every puzzle is generated for you and proven unique.", meta:"32 combinations · White belt through to 1st Dan", accent:"coral", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
-  { id:"killer", url:playPath(KILLER), eyebrow:"Arithmetic meets logic", title:"Killer Sudoku", description:"No given digits—only dashed cages and their sums. Work from small combinations to satisfying 45-rule breakthroughs.", meta:"8,200 puzzles · White belt through to 1st Dan", accent:"blue", grid:Array(81).fill(0) },
-  { id:"solduku", url:playPath(SOLDUKU), eyebrow:"Solitaire meets Sudoku", title:"Solduku", description:"Deal number cards into a real Sudoku grid. Park awkward cards, spend wild jokers and chase suit flushes for bonus points.", meta:"Shareable deals · White belt through to 1st Dan", accent:"gold", grid:[0,0,7,0,0,4,0,0,0,0,4,0,0,7,0,1,0,0,2,0,0,0,0,0,0,7,0,0,0,0,5,0,0,0,2,0,0,8,0,0,0,0,0,3,0,0,1,0,0,0,8,0,0,0,0,6,0,0,0,0,0,0,9,0,0,2,0,5,0,0,6,0,0,0,0,1,0,8,0,0,0] },
+  { id:"classic", url:playPath(SUDOKU,"?v=S"), eyebrow:"The timeless original", title:"Classic Sudoku", description:"Rows, columns and 3×3 boxes—the familiar game, presented cleanly with measured difficulty and useful technique-based hints.", meta:"Classic play · White belt through to 1st Dan", accent:"classic" },
+  { id:"variants", url:playPath(SUDOKU,"?v=XJ"), eyebrow:"The original, remixed", title:"Sudoku Variants", description:"Mix X, Jigsaw, Hyper, Percent and Colour rules in any combination. Every puzzle is generated for you and proven unique.", meta:"32 combinations · White belt through to 1st Dan", accent:"coral" },
+  { id:"killer", url:playPath(KILLER), eyebrow:"Arithmetic meets logic", title:"Killer Sudoku", description:"No given digits—only dashed cages and their sums. Work from small combinations to satisfying 45-rule breakthroughs.", meta:"8,200 puzzles · White belt through to 1st Dan", accent:"blue" },
+  { id:"solduku", url:playPath(SOLDUKU), eyebrow:"Solitaire meets Sudoku", title:"Solduku", description:"Deal number cards into a real Sudoku grid. Park awkward cards, spend wild jokers and chase suit flushes for bonus points.", meta:"Shareable deals · White belt through to 1st Dan", accent:"gold" },
 ];
 
-const regionColors=[0,0,1,1,1,2,2,2,3,0,0,1,4,4,4,2,3,3,0,5,5,5,4,6,6,3,3,7,7,5,8,8,6,6,6,3,7,7,5,5,8,8,6,1,1,7,2,2,5,8,0,0,1,1,7,2,4,4,8,0,3,3,3,6,6,4,4,8,0,0,3,5,6,6,6,4,7,7,7,5,5];
+// Which sides of cell i sit on the boundary of its group, so a region or cage
+// is outlined once around the whole shape rather than drawn per cell.
+function edges(group:number[],i:number):string{
+  const r=Math.floor(i/9),c=i%9,out:string[]=[];
+  if(r===0||group[i-9]!==group[i])out.push("et");
+  if(c===8||group[i+1]!==group[i])out.push("er");
+  if(r===8||group[i+9]!==group[i])out.push("eb");
+  if(c===0||group[i-1]!==group[i])out.push("el");
+  return out.join(" ");
+}
+// Both main diagonals: i%10 walks the leading one, i%8 the anti-diagonal
+// (excluding the two corners, which belong to the leading one).
+const onDiagonal=(i:number)=>i%10===0||(i%8===0&&i!==0&&i!==80);
+
 function PlayingCard({rank,suit,className=""}:{rank:string;suit:string;className?:string}){
   const pipPositions:Record<string,number[]>={"2":[1,7],"3":[1,4,7],"4":[0,2,6,8],"5":[0,2,4,6,8]};
   return <i className={className}><span className="card-index"><b>{rank}</b><em>{suit}</em></span><span className="pip-field">{Array.from({length:9},(_,i)=><em key={i}>{pipPositions[rank]?.includes(i)?suit:""}</em>)}</span><span className="card-index card-index-bottom"><b>{rank}</b><em>{suit}</em></span></i>
 }
 function GamePreview({game,compact=false}:{game:(typeof games)[number];compact?:boolean}){
-  if(game.id==="killer") return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>K6-104</span><b>★★★★★☆</b></div><div className="real-board killer-real">{Array.from({length:81},(_,i)=><i key={i} data-sum={i===0?"12":i===2?"17":i===9?"14":i===13?"8":i===20?"11":i===24?"20":i===31?"18":i===36?"9":i===43?"19":i===48?"17":i===55?"16":i===61?"12":i===67?"18":i===75?"20":""}></i>)}</div><div className="preview-bottom"><span>Undo</span><span>Hint</span><span>Sum</span></div></div>;
-  if(game.id==="solduku") {const cardsOnDisplay=5;const cardsInDrawPile=Math.max(0,game.grid.filter(n=>!n).length-cardsOnDisplay);return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>DEAL 3-18</span><b>1,240 PTS</b></div><div className="solduku-scene"><div className="real-board solduku-real">{game.grid.map((n,i)=><i key={i} className={n?"given":""}>{n||""}</i>)}</div><div className="freecell"><PlayingCard rank="3" suit="♣" className="club"/></div><div className="drawpile"><b>{cardsInDrawPile}</b></div><div className="real-hand"><PlayingCard rank="2" suit="♠" className="spade"/><PlayingCard rank="4" suit="♥" className="heart"/><PlayingCard rank="5" suit="♦" className="diamond"/><i className="joker"><span className="joker-index">JOKER</span><img src="joker-jester.png" alt=""/><span className="joker-ribbon">WILD</span><span className="joker-index joker-index-bottom">JOKER</span></i></div></div></div>}
-  if(game.id==="classic") return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>S4-128</span><b>★★★★☆☆</b></div><div className="real-board classic-real">{game.grid.map((n,i)=><i key={i} className={n?"given":""}>{n||""}</i>)}</div><div className="preview-bottom"><span>Classic 9×9</span><span>Hints</span><span>Notes</span></div></div>;
-  return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>XJHC5-27</span><b>X · J · H · C</b></div><div className="real-board variant-real">{game.grid.map((n,i)=><i key={i} className={`rg-${regionColors[i]} ${(i%10===0||i%8===0)?"diag":""}`}>{n||""}</i>)}</div><div className="preview-bottom"><span>X diagonals</span><span>Jigsaw</span><span>Colour</span></div></div>;
+  if(game.id==="killer") return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>K6-104</span><b>★★★★★☆</b></div><div className="real-board killer-real">{killerCage.map((_,i)=><i key={i} className={edges(killerCage,i)} data-sum={killerSum[i]||""}></i>)}</div><div className="preview-bottom"><span>Undo</span><span>Hint</span><span>Sum</span></div></div>;
+  if(game.id==="solduku") {const cardsOnDisplay=5;const cardsInDrawPile=Math.max(0,soldukuGivens.filter(n=>!n).length-cardsOnDisplay);return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>DEAL 3-18</span><b>1,240 PTS</b></div><div className="solduku-scene"><div className="real-board solduku-real">{soldukuGivens.map((n,i)=><i key={i} className={n?"given":""}>{n||""}</i>)}</div><div className="freecell"><PlayingCard rank="3" suit="♣" className="club"/></div><div className="drawpile"><b>{cardsInDrawPile}</b></div><div className="real-hand"><PlayingCard rank="2" suit="♠" className="spade"/><PlayingCard rank="4" suit="♥" className="heart"/><PlayingCard rank="5" suit="♦" className="diamond"/><i className="joker"><span className="joker-index">JOKER</span><img src="joker-jester.png" alt=""/><span className="joker-ribbon">WILD</span><span className="joker-index joker-index-bottom">JOKER</span></i></div></div></div>}
+  if(game.id==="classic") return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>S4-128</span><b>★★★★☆☆</b></div><div className="real-board classic-real">{classicGivens.map((n,i)=><i key={i} className={n?"given":""}>{n||""}</i>)}</div><div className="preview-bottom"><span>Classic 9×9</span><span>Hints</span><span>Notes</span></div></div>;
+  return <div className={`real-preview ${compact?"compact":""}`} aria-hidden="true"><div className="preview-label"><span>XJ5-27</span><b>X · Jigsaw</b></div><div className="real-board variant-real">{variantGivens.map((n,i)=><i key={i} className={`rg-${jigsawColour[jigsawRegions[i]]} ${edges(jigsawRegions,i)}${onDiagonal(i)?" diag":""}${n?" given":""}`}>{n||""}</i>)}</div><div className="preview-bottom"><span>X diagonals</span><span>Jigsaw</span><span>Unique</span></div></div>;
 }
+
 function MiniBoard({game}:{game:(typeof games)[number]}){return <GamePreview game={game} compact/>}
 const beltRanks=[
   {rank:"5th Kyū",colour:"White belt",note:"Foundations"},

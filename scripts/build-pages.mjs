@@ -35,6 +35,7 @@ const match = layout.match(/export const SITE_URL\s*=\s*["']([^"']+)["']/);
 if (!match) throw new Error("Could not read SITE_URL from app/layout.tsx");
 const SITE_URL = match[1];
 const base = new URL(SITE_URL).pathname.replace(/\/$/, ""); // "/DanDoku", or "" at a domain root
+const games = JSON.parse(await readFile(path.join(root, "games.json"), "utf8"));
 console.log(`site: ${SITE_URL}  base: ${base || "(root)"}  port: ${PORT}`);
 
 async function waitForServer(url, timeoutMs = 60_000) {
@@ -110,6 +111,66 @@ if (!hostname.endsWith("github.io")) {
   console.log(`wrote CNAME -> ${hostname}`);
 }
 
+// GitHub Pages serves 404.html for any unmatched path. Without one, a visitor
+// who mistypes a URL gets GitHub's own error page, which says nothing about
+// this site and offers no way back into it.
+const notFound = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page not found — DanDoku</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg">
+<style>
+:root{--ink:#17273d;--coral:#f06951;--night:#111c2b}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:40px 24px;
+background:var(--night);color:#fff;font:16px/1.6 ui-sans-serif,system-ui,Arial,sans-serif}
+main{max-width:560px;text-align:center}
+.mark{display:inline-flex;font-size:25px;font-weight:820;letter-spacing:-.055em;margin-bottom:36px}
+.mark i{font-style:normal;color:var(--coral)}
+h1{margin:0 0 14px;font-size:clamp(38px,7vw,60px);line-height:1;letter-spacing:-.05em}
+p{margin:0 0 30px;color:#b8c2cf}
+.links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+a{padding:13px 18px;border:1px solid rgba(255,255,255,.35);border-radius:4px;
+color:#fff;text-decoration:none;font-size:13px;font-weight:700}
+a.primary{background:var(--coral);border-color:var(--coral)}
+a:hover{background:rgba(255,255,255,.12)}
+a.primary:hover{background:#e2543b}
+</style>
+</head>
+<body>
+<main>
+<span class="mark"><i>Dan</i>Doku</span>
+<h1>Page not found</h1>
+<p>That page does not exist. The games are all still here.</p>
+<div class="links">
+<a class="primary" href="/">Home</a>
+${games.map((game) => `<a href="/${game.slug}/">/${game.slug}/</a>`).join("\n")}
+</div>
+</main>
+</body>
+</html>
+`;
+await writeFile(path.join(output, "404.html"), notFound);
+
+// robots.txt and sitemap.xml both come from SITE_URL and games.json, so they
+// cannot advertise a path this deploy does not actually produce.
+await writeFile(
+  path.join(output, "robots.txt"),
+  `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
+);
+const urls = ["/", ...games.map((game) => `/${game.slug}/`)];
+await writeFile(
+  path.join(output, "sitemap.xml"),
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map((u) => `  <url><loc>${SITE_URL}${u}</loc></url>`).join("\n") +
+    `\n</urlset>\n`,
+);
+console.log(`wrote 404.html, robots.txt and sitemap.xml (${urls.length} urls)`);
+
+
 // Vinext chunks contain root-relative asset references. Point those at the
 // repository subpath used by GitHub Pages.
 if (base) {
@@ -128,7 +189,7 @@ const problems = [];
 for (const junk of ["_headers", ".assetsignore", "vinext-client-entry-manifest.json", ".vite"]) {
   if (existsSync(path.join(output, junk))) problems.push(`build artifact ${junk} leaked into the published site`);
 }
-if (!html.includes(`${SITE_URL}/og.png`)) problems.push(`og:image does not point at ${SITE_URL}/og.png`);
+if (!html.includes(`${SITE_URL}/og.jpg`)) problems.push(`og:image does not point at ${SITE_URL}/og.jpg`);
 if (html.includes("localhost")) problems.push("snapshot still contains a localhost URL");
 if (base && html.includes('src="/_next/')) problems.push("snapshot still contains root-relative _next asset paths");
 // At a root domain the opposite mistake is the dangerous one: a stray base path

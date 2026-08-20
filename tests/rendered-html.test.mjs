@@ -79,7 +79,7 @@ test("renders every belt rank and game card", async () => {
 test("social metadata points at the public origin, not the render host", async () => {
   const html = await (await render()).text();
   assert.ok(
-    html.includes(`${SITE_URL}/og.png`),
+    html.includes(`${SITE_URL}/og.jpg`),
     "og:image must be absolute and point at the deployed origin",
   );
   assert.ok(
