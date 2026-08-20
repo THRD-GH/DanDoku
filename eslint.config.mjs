@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     "build/**",
     // Generated GitHub Pages snapshot: minified bundles, not source.
     "static-site/**",
+    // Game repos checked out by CI; they are other repositories with their own
+    // lint configuration and are not ours to lint.
+    "games/**",
     "next-env.d.ts",
   ]),
   eslint.configs.recommended,
