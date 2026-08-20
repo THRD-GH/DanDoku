@@ -3,7 +3,7 @@
 The homepage for [DanDoku](https://thrd-gh.github.io/DanDoku/) — a small collection of
 Sudoku variants and other number games. One page, no account, no tracking.
 
-The four games are served from this same domain, assembled into the site at
+The five games are served from this same domain, assembled into the site at
 deploy time. Each lives in its own repository:
 
 | Game | Path | Source |
@@ -12,6 +12,7 @@ deploy time. Each lives in its own repository:
 | Sudoku Variants | `/sudoku/?v=XJ` | [SodukuCombined](https://github.com/THRD-GH/SodukuCombined) |
 | Killer Sudoku | `/killer/` | [KillerSoduku](https://github.com/THRD-GH/KillerSoduku) |
 | Solduku | `/solduku/` | [Solduku](https://github.com/THRD-GH/Solduku) |
+| Kakuro | `/kakuro/` | [Kakuro](https://github.com/THRD-GH/Kakuro) |
 
 Classic and Variants are the same engine; the `?v=` query string selects the rule
 mix, so a card link that loses its query string silently sends players to the
@@ -57,7 +58,8 @@ deployed and where:
 [
   { "slug": "sudoku", "repo": "THRD-GH/SodukuCombined", "ref": "main" },
   { "slug": "killer", "repo": "THRD-GH/KillerSoduku", "ref": "main" },
-  { "slug": "solduku", "repo": "THRD-GH/Solduku", "ref": "master" }
+  { "slug": "solduku", "repo": "THRD-GH/Solduku", "ref": "master" },
+  { "slug": "kakuro", "repo": "THRD-GH/Kakuro", "ref": "main" }
 ]
 ```
 
@@ -84,7 +86,7 @@ This works because every game builds with Vite `base: './'` — its assets are
 relative, so its `dist/` runs from any sub-path unchanged. The service workers
 register as `` `${base}sw.js` `` with `{ scope: base }`, so each scopes to its own
 directory rather than taking over the domain, and each game namespaces its
-storage (`sv:v1:`, `sd:v1:`, `ks:v1:`) and prunes only its own prefix — so
+storage (`sv:v1:`, `sd:v1:`, `ks:v1:`, `kk:v1:`) and prunes only its own prefix — so
 sharing one origin is safe.
 
 The workflow fails the build if a game's `index.html` starts requesting

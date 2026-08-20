@@ -52,6 +52,7 @@ test("links out to every game in the collection", async () => {
     `/${sudoku}/?v=XJ`,
     `/${slugOf("THRD-GH/KillerSoduku")}/`,
     `/${slugOf("THRD-GH/Solduku")}/`,
+    `/${slugOf("THRD-GH/Kakuro")}/`,
   ];
   for (const url of expected) {
     assert.ok(html.includes(`href="${url}"`), `expected the page to link to ${url}`);
@@ -71,7 +72,7 @@ test("renders every belt rank and game card", async () => {
   for (const belt of ["White belt", "Yellow belt", "Green belt", "Blue belt", "Brown belt", "Black belt"]) {
     assert.ok(html.includes(belt), `expected the level guide to include ${belt}`);
   }
-  for (const title of ["Classic Sudoku", "Sudoku Variants", "Killer Sudoku", "Solduku"]) {
+  for (const title of ["Classic Sudoku", "Sudoku Variants", "Killer Sudoku", "Solduku", "Kakuro"]) {
     assert.ok(html.includes(title), `expected a card for ${title}`);
   }
 });
