@@ -22,6 +22,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # The test suite renders the built worker, so it has to run after the build.
+      - run: npm run build
+      - run: npm test
+      # Build the snapshot here rather than deploying whatever happens to be
+      # committed in static-site/. Previously this job uploaded the checked-in
+      # folder untouched, so a source change could ship a green build and leave
+      # the live site on the old snapshot.
+      - run: npm run build:pages
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

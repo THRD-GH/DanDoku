@@ -1,11 +1,15 @@
+// Renders the built worker and asserts the page a visitor actually receives.
+//
+// This file previously tested the vinext starter template's loading skeleton:
+// it read app/_sites-preview/, expected a react-loading-skeleton dependency and
+// a "Starter Project" layout title, and asserted a <title> of "Your site is
+// taking shape". None of that had existed since the site became DanDoku, so the
+// suite could not load, let alone pass — and CI never ran it.
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
+const SITE_URL = "https://dandoku.com";
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -13,79 +17,79 @@ async function render() {
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
+    new Request("http://localhost/", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
   );
 }
 
-test("server-renders the starter loading skeleton", async () => {
+test("serves the DanDoku homepage", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+  assert.match(html, /<title>DanDoku — Sudoku and other number games<\/title>/i);
+  assert.match(html, /Sudoku,/);
+  assert.match(html, /however you like/);
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
-  ]);
+test("links out to every game in the collection", async () => {
+  const html = await (await render()).text();
+  const expected = [
+    "https://thrd-gh.github.io/SodukuCombined/?v=S",
+    "https://thrd-gh.github.io/SodukuCombined/?v=XJ",
+    "https://thrd-gh.github.io/KillerSoduku/",
+    "https://thrd-gh.github.io/Solduku/",
+  ];
+  for (const url of expected) {
+    assert.ok(html.includes(url), `expected the page to link to ${url}`);
+  }
+  // Classic and Variants share an engine and are told apart only by ?v=,
+  // so a card link losing its query string is a silent regression.
+  assert.ok(html.includes("?v=S"), "Classic must open the S variant");
+  assert.ok(html.includes("?v=XJ"), "Variants must open the XJ mix");
+});
 
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
+test("renders every belt rank and game card", async () => {
+  const html = await (await render()).text();
+  for (const belt of ["White belt", "Yellow belt", "Green belt", "Blue belt", "Brown belt", "Black belt"]) {
+    assert.ok(html.includes(belt), `expected the level guide to include ${belt}`);
+  }
+  for (const title of ["Classic Sudoku", "Sudoku Variants", "Killer Sudoku", "Solduku"]) {
+    assert.ok(html.includes(title), `expected a card for ${title}`);
+  }
+});
 
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
+test("social metadata points at the public origin, not the render host", async () => {
+  const html = await (await render()).text();
+  assert.ok(
+    html.includes(`${SITE_URL}/og.png`),
+    "og:image must be absolute and point at the deployed origin",
   );
-
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
-
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
+  assert.ok(
+    !/content="https?:\/\/localhost[^"]*og\.png"/.test(html),
+    "og:image must not be derived from the render host",
   );
+  assert.ok(
+    !/content="[^"]*\/DanDoku\/og\.png"/.test(html),
+    "og:image must not carry a base path — the custom domain serves at the root",
+  );
+});
+
+test("SITE_URL stays the single source of truth for the base path", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const match = layout.match(/export const SITE_URL\s*=\s*["']([^"']+)["']/);
+  assert.ok(match, "app/layout.tsx must export a SITE_URL constant");
+  assert.equal(match[1], SITE_URL);
+
+  // scripts/build-pages.mjs derives the Pages base path by parsing this exact
+  // declaration, so the two must not drift apart.
+  const buildScript = await readFile(new URL("../scripts/build-pages.mjs", import.meta.url), "utf8");
+  assert.match(buildScript, /export const SITE_URL/);
+});
+
+test("no dead marks data lingers on the game list", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.ok(!/\bmarks:/.test(page), "game objects should not carry unused `marks` data");
 });

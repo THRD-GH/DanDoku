@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 const games = [
-  { id:"classic", url:"https://thrd-gh.github.io/SodukuCombined/?v=S", eyebrow:"The timeless original", title:"Classic Sudoku", description:"Rows, columns and 3×3 boxes—the familiar game, presented cleanly with measured difficulty and useful technique-based hints.", meta:"Classic play · White belt through to 1st Dan", accent:"classic", marks:[], grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
-  { id:"variants", url:"https://thrd-gh.github.io/SodukuCombined/?v=XJ", eyebrow:"The original, remixed", title:"Sudoku Variants", description:"Mix X, Jigsaw, Hyper, Percent and Colour rules in any combination. Every puzzle is generated for you and proven unique.", meta:"32 combinations · White belt through to 1st Dan", accent:"coral", marks:["X","J","H","%","C"], grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
-  { id:"killer", url:"https://thrd-gh.github.io/KillerSoduku/", eyebrow:"Arithmetic meets logic", title:"Killer Sudoku", description:"No given digits—only dashed cages and their sums. Work from small combinations to satisfying 45-rule breakthroughs.", meta:"5,200 classics · 3,000 new", accent:"blue", marks:["12","17","23"], grid:Array(81).fill(0) },
-  { id:"solduku", url:"https://thrd-gh.github.io/Solduku/", eyebrow:"Solitaire meets Sudoku", title:"Solduku", description:"Deal number cards into a real Sudoku grid. Park awkward cards, spend wild jokers and chase suit flushes for bonus points.", meta:"6 levels · Shareable deals", accent:"gold", marks:["♠","♥","♦","♣"], grid:[0,0,7,0,0,4,0,0,0,0,4,0,0,7,0,1,0,0,2,0,0,0,0,0,0,7,0,0,0,0,5,0,0,0,2,0,0,8,0,0,0,0,0,3,0,0,1,0,0,0,8,0,0,0,0,6,0,0,0,0,0,0,9,0,0,2,0,5,0,0,6,0,0,0,0,1,0,8,0,0,0] },
+  { id:"classic", url:"https://thrd-gh.github.io/SodukuCombined/?v=S", eyebrow:"The timeless original", title:"Classic Sudoku", description:"Rows, columns and 3×3 boxes—the familiar game, presented cleanly with measured difficulty and useful technique-based hints.", meta:"Classic play · White belt through to 1st Dan", accent:"classic", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
+  { id:"variants", url:"https://thrd-gh.github.io/SodukuCombined/?v=XJ", eyebrow:"The original, remixed", title:"Sudoku Variants", description:"Mix X, Jigsaw, Hyper, Percent and Colour rules in any combination. Every puzzle is generated for you and proven unique.", meta:"32 combinations · White belt through to 1st Dan", accent:"coral", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
+  { id:"killer", url:"https://thrd-gh.github.io/KillerSoduku/", eyebrow:"Arithmetic meets logic", title:"Killer Sudoku", description:"No given digits—only dashed cages and their sums. Work from small combinations to satisfying 45-rule breakthroughs.", meta:"8,200 puzzles · White belt through to 1st Dan", accent:"blue", grid:Array(81).fill(0) },
+  { id:"solduku", url:"https://thrd-gh.github.io/Solduku/", eyebrow:"Solitaire meets Sudoku", title:"Solduku", description:"Deal number cards into a real Sudoku grid. Park awkward cards, spend wild jokers and chase suit flushes for bonus points.", meta:"Shareable deals · White belt through to 1st Dan", accent:"gold", grid:[0,0,7,0,0,4,0,0,0,0,4,0,0,7,0,1,0,0,2,0,0,0,0,0,0,7,0,0,0,0,5,0,0,0,2,0,0,8,0,0,0,0,0,3,0,0,1,0,0,0,8,0,0,0,0,6,0,0,0,0,0,0,9,0,0,2,0,5,0,0,6,0,0,0,0,1,0,8,0,0,0] },
 ];
 
 const regionColors=[0,0,1,1,1,2,2,2,3,0,0,1,4,4,4,2,3,3,0,5,5,5,4,6,6,3,3,7,7,5,8,8,6,6,6,3,7,7,5,5,8,8,6,1,1,7,2,2,5,8,0,0,1,1,7,2,4,4,8,0,3,3,3,6,6,4,4,8,0,0,3,5,6,6,6,4,7,7,7,5,5];
@@ -60,13 +60,13 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="quick-strip" aria-label="Collection summary"><span><b>4</b> ways to play</span><span><b>6</b> ranks · White belt through to 1st Dan</span><span><b>✓</b> always a harder game</span></section>
+    <section className="quick-strip" aria-label="Collection summary"><span><b>{games.length}</b> ways to play</span><span><b>{beltRanks.length}</b> ranks · White belt through to 1st Dan</span><span><b>✓</b> always a harder game</span></section>
 
     <div className="ad-wrap ad-leaderboard"><AdPlaceholder format="970 × 90"/></div>
 
     <section className="collection" id="games">
       <div className="section-heading"><div><p className="kicker">The collection</p><h2>Pick your puzzle</h2></div><p>Every game works offline, remembers your progress, and lets you play from white belt through to 1st Dan—with a harder game always waiting.</p></div>
-      <div className="filters" aria-label="Filter games"><button className={active==="all"?"active":""} onClick={()=>setActive("all")}>All games</button>{games.map(game=><button key={game.id} className={active===game.id?"active":""} onClick={()=>setActive(game.id)}>{game.title}</button>)}</div>
+      <div className="filters" aria-label="Filter games"><button className={active==="all"?"active":""} aria-pressed={active==="all"} onClick={()=>setActive("all")}>All games</button>{games.map(game=><button key={game.id} className={active===game.id?"active":""} aria-pressed={active===game.id} onClick={()=>setActive(game.id)}>{game.title}</button>)}</div>
       <div className="game-grid">{visible.map((game,index)=><article className={`game-card ${game.accent}`} id={`game-${game.id}`} key={game.id}><div className="card-number">0{index+1}</div><MiniBoard game={game}/><div className="card-copy"><p className="eyebrow">{game.eyebrow}</p><h3>{game.title}</h3><p>{game.description}</p><LevelGuideLink/><div className="card-foot"><span>{game.meta}</span><a className="play-now" href={game.url} aria-label={`Play ${game.title}`}>Play now <b>↗</b></a></div></div></article>)}</div>
       <div className="ad-wrap ad-native"><AdPlaceholder format="Responsive native banner"/></div>
     </section>
@@ -79,7 +79,7 @@ export default function Home() {
 
     <section className="about" id="about"><div><p className="kicker">Built for real play</p><h2>Find your level.<br/>Earn your Dan.</h2></div><div className="about-list"><p><b>Rise through the ranks</b><span>Play from white belt through to 1st Dan, with a harder game always waiting.</span></p><p><b>Useful hints</b><span>See the solving technique and reasoning—not just the answer.</span></p><p><b>Progress saved</b><span>Every unfinished puzzle waits exactly where you left it.</span></p></div></section>
     <footer>
-      <div className="footer-main"><a className="wordmark" href="#top" aria-label="DanDoku home"><span className="word-dan">Dan</span><span className="word-doku">Doku</span></a><p>Classic · Variants · Killer Sudoku · Solduku</p><span>© 2026</span></div>
+      <div className="footer-main"><a className="wordmark" href="#top" aria-label="DanDoku home"><span className="word-dan">Dan</span><span className="word-doku">Doku</span></a><p>Classic · Variants · Killer Sudoku · Solduku</p><span suppressHydrationWarning>© {new Date().getFullYear()}</span></div>
       <p className="privacy-note"><b>Clean by design.</b> DanDoku does not collect personal data, run analytics or use tracking cookies. Your game progress stays on your device. Any advert spaces shown are placeholders only.</p>
     </footer>
   </main>;

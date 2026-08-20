@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "dist/**",
     "out/**",
     "build/**",
+    // Generated GitHub Pages snapshot: minified bundles, not source.
+    "static-site/**",
     "next-env.d.ts",
   ]),
   eslint.configs.recommended,
