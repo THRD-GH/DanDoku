@@ -1,0 +1,5 @@
+[
+  { "slug": "sudoku", "repo": "THRD-GH/SodukuCombined", "ref": "main" },
+  { "slug": "killer", "repo": "THRD-GH/KillerSoduku", "ref": "main" },
+  { "slug": "solduku", "repo": "THRD-GH/Solduku", "ref": "master" }
+]

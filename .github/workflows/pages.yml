@@ -8,7 +8,7 @@ on:
   # thing that should refresh the site. Rather than have each game repo hold a
   # token to poke this one, this workflow polls: the deployed site records the
   # commits it was built from, and the check job below compares them. Public
-  # repos are readable without credentials, so no secrets exist anywhere.
+  # repos are readable without credentials, so no secret exists anywhere.
   schedule:
     - cron: "*/15 * * * *"
 
@@ -17,34 +17,36 @@ permissions:
   pages: write
   id-token: write
 
+# Never cancel a deploy in flight. With a 15-minute schedule, cancel-in-progress
+# would let a routine tick kill a deploy triggered by a push; queueing is the
+# right trade for a job whose last step publishes the live site.
 concurrency:
   group: pages
-  cancel-in-progress: true
-
-env:
-  SUDOKU_REPO: THRD-GH/SodukuCombined
-  KILLER_REPO: THRD-GH/KillerSoduku
-  SOLDUKU_REPO: THRD-GH/Solduku
+  cancel-in-progress: false
 
 jobs:
-  # Cheap no-credential poll: roughly ten seconds, and on a quiet schedule tick
-  # it skips the deploy entirely rather than rebuilding three games for nothing.
+  # Cheap no-credential poll, schedule only: roughly ten seconds, and on a quiet
+  # tick it skips the deploy rather than rebuilding three games for nothing.
   check:
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
       fingerprint: ${{ steps.compare.outputs.want }}
     steps:
+      - uses: actions/checkout@v4
       - id: compare
         run: |
           set -euo pipefail
-          head_of() { git ls-remote "https://github.com/$1.git" HEAD | cut -f1; }
-          want="${{ github.sha }}-$(head_of "$SUDOKU_REPO")-$(head_of "$KILLER_REPO")-$(head_of "$SOLDUKU_REPO")"
+          want="${{ github.sha }}"
+          while read -r slug repo ref; do
+            [ -n "$slug" ] || continue
+            sha=$(git ls-remote "https://github.com/$repo.git" "$ref" | cut -f1 | head -1)
+            [ -n "$sha" ] || { echo "::error::could not resolve $repo@$ref"; exit 1; }
+            want="$want-$sha"
+          done < <(node -pe 'require("./games.json").map(g=>[g.slug,g.repo,g.ref].join(" ")).join("\n")')
 
-          # The live site publishes its own provenance. If it is unreachable or
-          # predates this file, treat it as changed and rebuild.
-          have=$(curl -fsS --max-time 20 https://dandoku.com/build-info.json 2>/dev/null \
-                 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).fingerprint||""))}catch{process.stdout.write("")}})' 2>/dev/null || true)
+          have=$(curl -fsS --max-time 20 https://dandoku.com/build-info.json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).fingerprint||""))}catch{process.stdout.write("")}})' 2>/dev/null || true)
 
           echo "want: $want"
           echo "have: ${have:-<none>}"
@@ -58,9 +60,12 @@ jobs:
 
   deploy:
     needs: check
-    # A schedule tick only deploys when something actually moved. Pushes and
-    # manual runs always deploy.
-    if: github.event_name != 'schedule' || needs.check.outputs.changed == 'true'
+    # check only runs on a schedule, so it is skipped for pushes and manual
+    # runs - !cancelled() lets this run anyway, while a genuine check failure
+    # leaves changed empty and holds the deploy back.
+    if: |
+      !cancelled() &&
+      (github.event_name != 'schedule' || needs.check.outputs.changed == 'true')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -68,14 +73,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Check the games out before setup-node so their lockfiles are visible to
-      # the dependency cache.
-      - uses: actions/checkout@v4
-        with: { repository: THRD-GH/SodukuCombined, path: games/sudoku }
-      - uses: actions/checkout@v4
-        with: { repository: THRD-GH/KillerSoduku, path: games/killer }
-      - uses: actions/checkout@v4
-        with: { repository: THRD-GH/Solduku, path: games/solduku }
+      # games.json is the single source of truth for which games are deployed
+      # and where. Cloning from it here, rather than hardcoding repositories in
+      # this file, is what keeps the site's links, the assembled directories and
+      # the change poll from drifting apart.
+      - name: Clone the games
+        run: |
+          set -euo pipefail
+          while read -r slug repo ref; do
+            [ -n "$slug" ] || continue
+            echo "cloning $repo@$ref -> games/$slug"
+            git clone --depth 1 --branch "$ref" "https://github.com/$repo.git" "games/$slug"
+          done < <(node -pe 'require("./games.json").map(g=>[g.slug,g.repo,g.ref].join(" ")).join("\n")')
 
       - uses: actions/setup-node@v4
         with:
@@ -98,24 +107,24 @@ jobs:
       - name: Assemble the games into the site
         run: |
           set -euo pipefail
-          for slug in sudoku killer solduku; do
+          for slug in $(node -pe 'require("./games.json").map(g=>g.slug).join(" ")'); do
             echo "::group::$slug"
             ( cd "games/$slug" && npm ci && npm run build )
             cp -r "games/$slug/dist" "static-site/$slug"
-            test -f "static-site/$slug/index.html" || { echo "$slug produced no index.html"; exit 1; }
+            test -f "static-site/$slug/index.html" || { echo "::error::$slug produced no index.html"; exit 1; }
             echo "assembled /$slug/"
             echo "::endgroup::"
           done
 
-      # Every game builds with Vite `base: './'`, so its assets are relative and
+      # Every game builds with Vite base './', so its assets are relative and
       # work from any sub-path. If that ever changes, the game would request
-      # assets from the domain root and silently 404 — the same failure that
-      # took the homepage down — so fail the build instead of shipping it.
+      # assets from the domain root and silently 404 - the same failure that
+      # took the homepage down - so fail the build instead of shipping it.
       - name: Verify the games are sub-path safe
         run: |
           set -euo pipefail
           fail=0
-          for slug in sudoku killer solduku; do
+          for slug in $(node -pe 'require("./games.json").map(g=>g.slug).join(" ")'); do
             if grep -qE '(src|href)="/[^"]' "static-site/$slug/index.html"; then
               echo "::error::/$slug/ references root-absolute assets and will 404 under a sub-path"
               grep -oE '(src|href)="/[^"]*"' "static-site/$slug/index.html" | head -5
@@ -129,25 +138,11 @@ jobs:
       - name: Record build provenance
         run: |
           set -euo pipefail
-          node -e '
-            const fs = require("node:fs");
-            const { execSync } = require("node:child_process");
-            const head = (dir) => execSync("git rev-parse HEAD", { cwd: dir }).toString().trim();
-            const games = { sudoku: head("games/sudoku"), killer: head("games/killer"), solduku: head("games/solduku") };
-            const info = {
-              site: process.env.GITHUB_SHA,
-              games,
-              fingerprint: [process.env.GITHUB_SHA, games.sudoku, games.killer, games.solduku].join("-"),
-              builtAt: new Date().toISOString(),
-            };
-            fs.writeFileSync("static-site/build-info.json", JSON.stringify(info, null, 2) + "\n");
-            console.log(info.fingerprint);
-          '
-          # The poll compares against this exact value; a mismatch here would
-          # make every scheduled run rebuild forever.
+          node scripts/write-build-info.mjs
           built=$(node -pe 'JSON.parse(require("fs").readFileSync("static-site/build-info.json","utf8")).fingerprint')
-          if [ "$built" != "${{ needs.check.outputs.fingerprint }}" ]; then
-            echo "::warning::fingerprint differs from the poll's expectation (a game moved mid-build); next tick will rebuild"
+          expected="${{ needs.check.outputs.fingerprint }}"
+          if [ -n "$expected" ] && [ "$built" != "$expected" ]; then
+            echo "::warning::fingerprint differs from the poll expectation (a game moved mid-build); next tick will rebuild"
           fi
 
       - uses: actions/configure-pages@v5

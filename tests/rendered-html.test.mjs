@@ -36,9 +36,23 @@ test("serves the DanDoku homepage", async () => {
 
 test("links out to every game in the collection", async () => {
   const html = await (await render()).text();
-  // The games are assembled into this same site at these paths by
-  // .github/workflows/pages.yml, so the links are same-origin and relative.
-  const expected = ["/sudoku/?v=S", "/sudoku/?v=XJ", "/killer/", "/solduku/"];
+  const manifest = JSON.parse(
+    await readFile(new URL("../games.json", import.meta.url), "utf8"),
+  );
+  const slugOf = (repo) => {
+    const entry = manifest.find((game) => game.repo === repo);
+    assert.ok(entry, `games.json has no entry for ${repo}`);
+    return entry.slug;
+  };
+  // Slugs come from the manifest so this cannot drift from what CI deploys;
+  // the query strings are the part worth pinning here.
+  const sudoku = slugOf("THRD-GH/SodukuCombined");
+  const expected = [
+    `/${sudoku}/?v=S`,
+    `/${sudoku}/?v=XJ`,
+    `/${slugOf("THRD-GH/KillerSoduku")}/`,
+    `/${slugOf("THRD-GH/Solduku")}/`,
+  ];
   for (const url of expected) {
     assert.ok(html.includes(`href="${url}"`), `expected the page to link to ${url}`);
   }
@@ -88,6 +102,45 @@ test("SITE_URL stays the single source of truth for the base path", async () => 
   // declaration, so the two must not drift apart.
   const buildScript = await readFile(new URL("../scripts/build-pages.mjs", import.meta.url), "utf8");
   assert.match(buildScript, /export const SITE_URL/);
+});
+
+test("every play link points at a game the manifest actually deploys", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../games.json", import.meta.url), "utf8"),
+  );
+  const slugs = new Set(manifest.map((game) => game.slug));
+  const html = await (await render()).text();
+
+  // The workflow checks out, builds and assembles exactly the slugs in
+  // games.json. A link to anything else is a 404 that nothing else catches:
+  // lint, the build and the sub-path gate all pass regardless.
+  const linked = [];
+  for (const part of html.split('href="/').slice(1)) {
+    const seg = part.split("/")[0];
+    if (!seg || seg.includes('"') || seg.includes("?")) continue;
+    if (seg.startsWith("_")) continue; // framework assets, not game links
+    linked.push(seg);
+  }
+  assert.ok(linked.length > 0, "expected the page to contain play links");
+  for (const slug of new Set(linked)) {
+    assert.ok(slugs.has(slug), `page links to /${slug}/ but games.json has no such slug`);
+  }
+  for (const slug of slugs) {
+    assert.ok(linked.includes(slug), `games.json deploys /${slug}/ but nothing links to it`);
+  }
+});
+
+test("the manifest is well formed", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../games.json", import.meta.url), "utf8"),
+  );
+  assert.ok(Array.isArray(manifest) && manifest.length > 0);
+  for (const game of manifest) {
+    assert.match(game.slug, /^[a-z0-9-]+$/, "slug must be URL-safe");
+    assert.ok(game.repo.split("/").length === 2, "repo must be owner/name");
+    assert.ok(typeof game.ref === "string" && game.ref.length > 0, "ref is required");
+  }
+  assert.equal(new Set(manifest.map((g) => g.slug)).size, manifest.length, "slugs must be unique");
 });
 
 test("no dead marks data lingers on the game list", async () => {

@@ -1,12 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import gameManifest from "../games.json";
+
+// games.json is the single source of truth for where each game is deployed.
+// The CI workflow reads it to check out, build and assemble the games, and to
+// poll them for changes; this builds the play links from the same file. Keying
+// on the repository — the stable identifier — means renaming a slug moves the
+// deployed path and these links together, instead of silently 404ing.
+function playPath(repo: string, query = ""): string {
+  const entry = gameManifest.find((game) => game.repo === repo);
+  if (!entry) throw new Error(`games.json has no entry for ${repo}`);
+  return `/${entry.slug}/${query}`;
+}
+const SUDOKU = "THRD-GH/SodukuCombined";
+const KILLER = "THRD-GH/KillerSoduku";
+const SOLDUKU = "THRD-GH/Solduku";
 
 const games = [
-  { id:"classic", url:"/sudoku/?v=S", eyebrow:"The timeless original", title:"Classic Sudoku", description:"Rows, columns and 3×3 boxes—the familiar game, presented cleanly with measured difficulty and useful technique-based hints.", meta:"Classic play · White belt through to 1st Dan", accent:"classic", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
-  { id:"variants", url:"/sudoku/?v=XJ", eyebrow:"The original, remixed", title:"Sudoku Variants", description:"Mix X, Jigsaw, Hyper, Percent and Colour rules in any combination. Every puzzle is generated for you and proven unique.", meta:"32 combinations · White belt through to 1st Dan", accent:"coral", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
-  { id:"killer", url:"/killer/", eyebrow:"Arithmetic meets logic", title:"Killer Sudoku", description:"No given digits—only dashed cages and their sums. Work from small combinations to satisfying 45-rule breakthroughs.", meta:"8,200 puzzles · White belt through to 1st Dan", accent:"blue", grid:Array(81).fill(0) },
-  { id:"solduku", url:"/solduku/", eyebrow:"Solitaire meets Sudoku", title:"Solduku", description:"Deal number cards into a real Sudoku grid. Park awkward cards, spend wild jokers and chase suit flushes for bonus points.", meta:"Shareable deals · White belt through to 1st Dan", accent:"gold", grid:[0,0,7,0,0,4,0,0,0,0,4,0,0,7,0,1,0,0,2,0,0,0,0,0,0,7,0,0,0,0,5,0,0,0,2,0,0,8,0,0,0,0,0,3,0,0,1,0,0,0,8,0,0,0,0,6,0,0,0,0,0,0,9,0,0,2,0,5,0,0,6,0,0,0,0,1,0,8,0,0,0] },
+  { id:"classic", url:playPath(SUDOKU,"?v=S"), eyebrow:"The timeless original", title:"Classic Sudoku", description:"Rows, columns and 3×3 boxes—the familiar game, presented cleanly with measured difficulty and useful technique-based hints.", meta:"Classic play · White belt through to 1st Dan", accent:"classic", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
+  { id:"variants", url:playPath(SUDOKU,"?v=XJ"), eyebrow:"The original, remixed", title:"Sudoku Variants", description:"Mix X, Jigsaw, Hyper, Percent and Colour rules in any combination. Every puzzle is generated for you and proven unique.", meta:"32 combinations · White belt through to 1st Dan", accent:"coral", grid:[5,0,0,0,7,0,0,0,2,0,8,0,4,0,6,0,1,0,0,0,3,0,0,0,8,0,0,9,0,0,6,0,2,0,0,7,0,2,0,0,8,0,0,6,0,6,0,0,3,0,9,0,0,4,0,0,4,0,0,0,7,0,0,0,3,0,9,0,5,0,8,0,7,0,0,0,1,0,0,0,6] },
+  { id:"killer", url:playPath(KILLER), eyebrow:"Arithmetic meets logic", title:"Killer Sudoku", description:"No given digits—only dashed cages and their sums. Work from small combinations to satisfying 45-rule breakthroughs.", meta:"8,200 puzzles · White belt through to 1st Dan", accent:"blue", grid:Array(81).fill(0) },
+  { id:"solduku", url:playPath(SOLDUKU), eyebrow:"Solitaire meets Sudoku", title:"Solduku", description:"Deal number cards into a real Sudoku grid. Park awkward cards, spend wild jokers and chase suit flushes for bonus points.", meta:"Shareable deals · White belt through to 1st Dan", accent:"gold", grid:[0,0,7,0,0,4,0,0,0,0,4,0,0,7,0,1,0,0,2,0,0,0,0,0,0,7,0,0,0,0,5,0,0,0,2,0,0,8,0,0,0,0,0,3,0,0,1,0,0,0,8,0,0,0,0,6,0,0,0,0,0,0,9,0,0,2,0,5,0,0,6,0,0,0,0,1,0,8,0,0,0] },
 ];
 
 const regionColors=[0,0,1,1,1,2,2,2,3,0,0,1,4,4,4,2,3,3,0,5,5,5,4,6,6,3,3,7,7,5,8,8,6,6,6,3,7,7,5,5,8,8,6,1,1,7,2,2,5,8,0,0,1,1,7,2,4,4,8,0,3,3,3,6,6,4,4,8,0,0,3,5,6,6,6,4,7,7,7,5,5];

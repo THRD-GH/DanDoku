@@ -39,14 +39,40 @@ The site is a static snapshot deployed to GitHub Pages.
 2. `npm run build:pages` starts the production server, snapshots the rendered
    HTML into `static-site/`, rewrites root-relative asset paths onto the
    base path derived from `SITE_URL`, and verifies the result before writing it.
-3. The workflow then checks out each game repo, builds it, and copies its
-   `dist` into `static-site/<slug>/`.
+3. The workflow then clones each game listed in [`games.json`](games.json),
+   builds it, and copies its `dist` into `static-site/<slug>/`.
 4. `.github/workflows/pages.yml` runs all of the above on every push to `main`
    and deploys what it just built.
 
 CI builds the snapshot rather than deploying the committed copy of
 `static-site/`, so editing `app/` is enough — the snapshot in the repo is only a
 build artifact.
+
+## games.json
+
+[`games.json`](games.json) is the single source of truth for which games are
+deployed and where:
+
+```json
+[
+  { "slug": "sudoku", "repo": "THRD-GH/SodukuCombined", "ref": "main" },
+  { "slug": "killer", "repo": "THRD-GH/KillerSoduku", "ref": "main" },
+  { "slug": "solduku", "repo": "THRD-GH/Solduku", "ref": "master" }
+]
+```
+
+The deploy clones from it, assembles from it, and polls it for changes;
+`app/page.tsx` builds its play links from it, keyed on `repo` — the stable
+identifier — so renaming a `slug` moves the deployed path and the links to it
+together. A test asserts that every link on the page points at a slug the
+manifest actually deploys, and that every slug is linked, because a mismatch
+otherwise passes lint, the build and the sub-path gate and only shows up as a
+404 in production.
+
+`ref` is any git ref. It is normally the default branch, so the site tracks each
+game automatically — note these are not uniform, `Solduku` still uses `master`.
+Pin one to a tag when you want a game held still, and rollback becomes editing a
+single line.
 
 ## How the games get here
 
@@ -134,6 +160,8 @@ certificate.
 - `app/` — the entire site: `page.tsx` (markup and game data), `globals.css`,
   `layout.tsx` (metadata and `SITE_URL`)
 - `scripts/build-pages.mjs` — snapshot builder
+- `games.json` — which games are deployed, and from which ref
+- `scripts/write-build-info.mjs` — records the commits a deploy was built from
 - `static-site/` — generated snapshot with the games assembled in; not
   committed, rebuilt by CI on every deploy
 - `worker/` — Cloudflare Worker entry used by the vinext build

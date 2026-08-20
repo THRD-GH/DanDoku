@@ -7,6 +7,7 @@
 // of snapshotting a stale server.
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -88,6 +89,15 @@ if (base) {
     .replaceAll('href="/favicon.svg"', `href="${base}/favicon.svg"`);
 }
 
+// vinext emits a few Cloudflare-Workers build artifacts into dist/client that
+// GitHub Pages has no use for. _headers in particular is a Cloudflare Pages and
+// Netlify convention: Pages ignores it entirely, so the immutable cache policy
+// it declares never applied — assets are served with max-age=600 regardless.
+// They were all being published as public files, so drop them.
+for (const junk of ["_headers", ".assetsignore", "vinext-client-entry-manifest.json", ".vite"]) {
+  await rm(path.join(output, junk), { recursive: true, force: true });
+}
+
 await writeFile(path.join(output, "index.html"), html);
 await writeFile(path.join(output, ".nojekyll"), "");
 
@@ -115,6 +125,9 @@ if (base) {
 
 // Fail loudly rather than shipping a snapshot that points at the wrong origin.
 const problems = [];
+for (const junk of ["_headers", ".assetsignore", "vinext-client-entry-manifest.json", ".vite"]) {
+  if (existsSync(path.join(output, junk))) problems.push(`build artifact ${junk} leaked into the published site`);
+}
 if (!html.includes(`${SITE_URL}/og.png`)) problems.push(`og:image does not point at ${SITE_URL}/og.png`);
 if (html.includes("localhost")) problems.push("snapshot still contains a localhost URL");
 if (base && html.includes('src="/_next/')) problems.push("snapshot still contains root-relative _next asset paths");
